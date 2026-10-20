@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv
+models/*.pth
+results/*.csv
+results/*.png
+demo/*.gif
+demo/*.mp4
+.DS_Store
+Thumbs.db
