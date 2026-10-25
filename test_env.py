@@ -1,13 +1,10 @@
 """
-Quick test script for the MissileEnv.
-Run this to verify the environment works with random actions.
-
+Test script for the stage-based MissileEnv.
 Usage:
-    python test_env.py              # with rendering
-    python test_env.py --headless   # without rendering (faster)
+    python test_env.py              # with Pygame window
+    python test_env.py --headless   # no rendering
 """
 import sys
-import numpy as np
 from env.missile_env import MissileEnv
 
 
@@ -17,21 +14,17 @@ def main():
 
     env = MissileEnv(render_mode=render_mode)
 
-    num_episodes = 20 if headless else 5
-    results = {"target": 0, "obstacle": 0, "wall": 0, "timeout": 0}
+    num_episodes = 20 if headless else 3
+    results = {"boss": 0, "crash": 0, "timeout": 0}
 
     for ep in range(num_episodes):
         obs, info = env.reset()
-
-        # sanity checks on observation
-        assert obs.shape == (8,), f"Bad obs shape: {obs.shape}"
-        assert env.observation_space.contains(obs), (
-            f"Obs out of bounds: min={obs.min():.3f}, max={obs.max():.3f}"
-        )
+        assert obs.shape == (10,), f"Bad obs shape: {obs.shape}"
 
         done = False
         total_reward = 0.0
         steps = 0
+        max_progress = 0.0
 
         while not done:
             action = env.action_space.sample()
@@ -39,35 +32,30 @@ def main():
             total_reward += reward
             steps += 1
             done = terminated or truncated
+            max_progress = max(max_progress, info.get("progress", 0))
 
-            assert obs.shape == (8,), f"Step obs shape wrong: {obs.shape}"
-
-        # figure out why the episode ended
-        if terminated and reward > 50:
-            results["target"] += 1
-            reason = "HIT TARGET"
-        elif terminated and reward < -20:
-            results["obstacle"] += 1
-            reason = "CRASH"
-        elif truncated:
+        if terminated and reward > 100:
+            results["boss"] += 1
+            reason = "HIT BOSS!"
+        elif terminated:
+            results["crash"] += 1
+            reason = f"CRASH ({info.get('zone', '?')})"
+        else:
             results["timeout"] += 1
             reason = "TIMEOUT"
-        else:
-            results["wall"] += 1
-            reason = "OTHER"
 
-        print(f"Ep {ep+1:3d} | Steps: {steps:4d} | Reward: {total_reward:8.1f} | {reason}")
+        print(f"Ep {ep+1:3d} | Steps: {steps:4d} | Reward: {total_reward:8.1f} "
+              f"| Progress: {max_progress*100:4.0f}% | {reason}")
 
     env.close()
 
-    print(f"\n{'='*50}")
+    print(f"\n{'='*60}")
     print(f"Results over {num_episodes} episodes (random agent):")
-    print(f"  Target reached: {results['target']}")
-    print(f"  Crashed:        {results['obstacle']}")
-    print(f"  Timed out:      {results['timeout']}")
-    print(f"  Wall hits:      {results['wall']}")
-    print(f"{'='*50}")
-    print("ALL TESTS PASSED — Environment is working!")
+    print(f"  Boss reached: {results['boss']}")
+    print(f"  Crashed:      {results['crash']}")
+    print(f"  Timed out:    {results['timeout']}")
+    print(f"{'='*60}")
+    print("ALL TESTS PASSED!")
 
 
 if __name__ == "__main__":

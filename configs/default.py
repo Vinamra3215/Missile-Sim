@@ -1,21 +1,22 @@
 # ─── Environment ───
-ENV_WIDTH = 800
-ENV_HEIGHT = 600
-MAX_STEPS = 500
-NUM_OBSTACLES = 5
-TARGET_RADIUS = 20
+ENV_WIDTH = 800             # viewport width (camera window)
+ENV_HEIGHT = 600            # viewport height
+WORLD_WIDTH = 3000          # total scrollable world width
+MAX_STEPS = 800             # max steps per episode
 MISSILE_RADIUS = 8
-MISSILE_MAX_SPEED = 5.0
-MISSILE_TURN_RATE = 0.1        # radians per step (~5.7 degrees)
-MISSILE_THRUST = 0.3
+MISSILE_MAX_SPEED = 6.0
+MISSILE_TURN_RATE = 0.12    # radians per step
+MISSILE_THRUST = 0.35
+MISSILE_DRAG = 0.995        # slight air drag
 
 # ─── Rewards ───
-REWARD_HIT_TARGET = 100.0
-REWARD_HIT_OBSTACLE = -50.0
-REWARD_HIT_WALL = -50.0
-REWARD_TIME_PENALTY = -0.1
-REWARD_DISTANCE_SHAPING = 1.0
-REWARD_HEADING_BONUS = 0.1
+REWARD_HIT_TARGET = 200.0
+REWARD_HIT_OBSTACLE = -100.0
+REWARD_HIT_WALL = -100.0
+REWARD_TIME_PENALTY = -0.05
+REWARD_PROGRESS = 0.3       # reward per unit of forward progress
+REWARD_CHECKPOINT = 20.0    # bonus for passing a zone checkpoint
+REWARD_HEADING_BONUS = 0.05
 
 # ─── DQN ───
 DQN_LR = 1e-3
@@ -27,7 +28,7 @@ DQN_BATCH_SIZE = 64
 DQN_BUFFER_SIZE = 50000
 DQN_TARGET_UPDATE = 10
 DQN_HIDDEN_DIM = 128
-DQN_EPISODES = 2000
+DQN_EPISODES = 3000
 
 # ─── PPO ───
 PPO_LR = 3e-4
