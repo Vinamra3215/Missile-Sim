@@ -15,3 +15,10 @@ demo/*.gif
 demo/*.mp4
 .DS_Store
 Thumbs.db
+
+# 3D project outputs
+models/
+results/
+logs/
+plots/
+demo/_frames/
