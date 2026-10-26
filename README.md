@@ -1,13 +1,13 @@
 # MissileSim 3D — Reinforcement Learning for Autonomous Missile Navigation
 
-**Team:** Darsh Choudhary (B24CM1019), Vinamra Gupta (B24CM1068)  
+**Team:** Darsh Choudhary (B24CM1019), Vinamra Gupta (B24CM1068)<br>
 **Report:** [`docs/report.pdf`](docs/report.pdf)
 
 An RL agent learns to fly a missile through **procedurally generated 3D tunnels** full of
 static pipes, **moving pipes** and **gates** (walls with one hole), and hit a target core at the
 end — using only onboard range sensors. Every episode is a brand-new map, and all results are
 measured on **held-out maps never seen during training**. Two algorithms are implemented from
-scratch in PyTorch and compared: **PPO** (main) and **DQN** (baseline).
+directly in PyTorch (no RL libraries) and compared: **PPO** (main) and **DQN** (baseline).
 
 ![demo](docs/demo.gif)
 
@@ -37,6 +37,45 @@ that the hand-coded rule cannot do.
 | **Reward** | `0.1·(distance closed) − 0.01 per step + 20 hit − 10 crash − 5 timeout` |
 | **Episode ends** | target hit, crash (wall / pipe / gate), or time limit |
 | **Curriculum** | difficulty `level ∈ [0, 2]`; +0.1 when success ≥ 75% at the current level. Level 1–2 is an *expert tier* (400-long tunnels, ~13 moving pipes, ~8 gates) |
+
+## The environment and physics simulator
+
+The simulator is a supporting component of the project; our focus is the RL side (problem
+formulation, reward and curriculum design, and training and evaluating PPO and DQN). It is
+custom code written for this project **with AI assistance**, in
+[`sim3d/tunnel_env.py`](sim3d/tunnel_env.py); no physics engine, game engine or RL environment
+library is used for training. It is written in PyTorch so that many environments (128 for PPO,
+64 for DQN) are simulated together as one batch of tensors. How it works:
+
+- **Procedural map generator.** Every episode builds a new tunnel: its length and the number of
+  obstacles depend on the difficulty level. Obstacle slots are spread along the tunnel with random
+  jitter; each slot becomes a **pipe** (random angle, height/offset, tilt and radius), a **gate**
+  (a wall with one circular hole at a random position) or stays empty. The slot before a gate is
+  always left empty, so every map is solvable. Some pipes **move**, sliding back and forth as
+  `p(t) = p0 + m·A·sin(ωt + φ)`. The target and the missile's start pose are randomised too.
+- **Flight kinematics.** An arcade missile model integrated with explicit Euler steps at 20 Hz:
+  each action changes pitch, yaw (1.8 rad/s) or speed (±12 units/s², limited to 8–22, so the
+  missile can never stop), then the missile moves along its heading `p ← p + v·f(pitch, yaw)·Δt`.
+- **Collision detection (analytic geometry, every step).**
+  Walls: the missile is outside the 16×16 cross-section.
+  Pipes: the distance from the missile's centre to the pipe's axis line, `‖w − (w·u)u‖`, is
+  smaller than pipe radius + missile radius.
+  Gates: the missile is within the wall's thickness and outside the hole.
+  Target: the distance to the target centre is below 2.2.
+  The largest step the missile can take (1.1) is shorter than the thinnest obstacle (1.4), so it
+  can never pass through anything between two steps.
+- **Ray-cast sensors (the agent's "eyes").** 25 rays in a 5×5 grid fan out from the nose. For each
+  ray we compute the nearest hit analytically: against the walls (ray–plane), against every pipe
+  (ray–cylinder: a quadratic equation `At² + Bt + C = 0`, smallest positive root) and against
+  every gate (ray–plane, ignored if the hit point lies inside the hole). Readings are clipped to
+  40 units and normalised. The previous step's readings are also given to the agent so it can
+  perceive moving pipes.
+- **Rewards, termination and curriculum** as in the table above, all computed in the same batched code.
+- **Rendering is separate.** [`viewer.py`](viewer.py) runs the *same* simulator for one missile and
+  draws it with the Ursina 3D engine (meshes built from the same geometry, our own lighting
+  shader). It is only for watching and playing, never used during training.
+- **Tests.** [`tests/test_env.py`](tests/test_env.py) checks observation ranges, that no map starts
+  in a collision, reproducibility by seed, and the gate ray/collision geometry.
 
 ## Installation
 
